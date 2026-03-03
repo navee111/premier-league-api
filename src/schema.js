@@ -48,4 +48,13 @@ export const typeDefs = gql`
   type Mutation {
     createMatchComment(matchId: Int!, content: String!, rating: Int!): MatchComment!
 }
+    type AuthPayload {
+  token: String!
+  user: User!
+}
+
+extend type Mutation {
+  register(email: String!, password: String!): AuthPayload!
+  login(email: String!, password: String!): AuthPayload!
+}
 `
