@@ -1,6 +1,6 @@
-import { qql } from 'apollo-server-express'
+import { gql } from 'apollo-server-express'
 
-export const typeDefs = qql`
+export const typeDefs = gql`
   type Team {
     id: Int!
     name: String!
