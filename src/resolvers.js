@@ -1,33 +1,54 @@
+import bcrypt from "bcrypt"
+import jwt from "jsonwebtoken"
+
+
 export const resolvers = {
-  Query: {
-    teams: async (_, __, { prisma }) => prisma.team.findMany(),
-    players: async (_, __, { prisma }) => prisma.player.findMany(),
-    matches: async (_, __, { prisma }) => prisma.match.findMany(),
-    match: async (_, { id }, { prisma }) => prisma.match.findUnique({ where: { id } })
-  },
+  Query: {},
 
   Mutation: {
-    createMatchComment: async (_, { matchId, content, rating }, { prisma, user }) => {
+
+    async register(_, { email, password }, { prisma }) {
+      const hashedPassword = await bcrypt.hash(password, 10)
+
+      const user = await prisma.user.create({
+        data: {
+          email,
+          password: hashedPassword
+        }
+      })
+
+      const token = jwt.sign(
+        { userId: user.id },
+        process.env.JWT_SECRET,
+        { expiresIn: "1d" }
+      )
+
+      return { token, user }
+    },
+
+    async login(_, { email, password }, { prisma }) {
+      const user = await prisma.user.findUnique({ where: { email } })
+      if (!user) throw new Error("User not found")
+
+      const valid = await bcrypt.compare(password, user.password)
+      if (!valid) throw new Error("Invalid password")
+
+      const token = jwt.sign(
+        { userId: user.id },
+        process.env.JWT_SECRET,
+        { expiresIn: "1d" }
+      )
+
+      return { token, user }
+    },
+
+    async createMatchComment(_, { matchId, content, rating }, { prisma, user }) {
       if (!user) throw new Error("Unauthorized")
+
       return prisma.matchComment.create({
         data: { matchId, content, rating }
       })
     }
-  },
-
-  Team: {
-    players: (parent, _, { prisma }) => prisma.player.findMany({ where: { teamId: parent.id } })
-  },
-
-  Player: {
-    team: (parent, _, { prisma }) => prisma.team.findUnique({ where: { id: parent.teamId } })
-  },
-
-  Match: {
-    comments: (parent, _, { prisma }) => prisma.matchComment.findMany({ where: { matchId: parent.id } })
-  },
-
-  MatchComment: {
-    match: (parent, _, { prisma }) => prisma.match.findUnique({ where: { id: parent.matchId } })
+    
   }
 }
